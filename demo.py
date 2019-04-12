@@ -6,6 +6,7 @@ import cv2
 import os
 from __future__ import print_function
 
+from abc import ABCMeta, abstractmethod
 import numpy as np
 
 from multiprocessing.pool import ThreadPool
@@ -44,7 +45,7 @@ class Video:
                 (grabbed, frame) = vs.read()
     def videoToFrame(configs):
         return 1
-
+class paraser
 
 
 class Model:
