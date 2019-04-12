@@ -45,26 +45,40 @@ class Video:
                 (grabbed, frame) = vs.read()
     def videoToFrame(configs):
         return 1
+
+# parse the user configs 
 class paraser
 
 
-class Model:
+class Model(ABC):
     def __init__(self, Task, configs):
         self.modelNet = None
         self.ln=None
         self.modelType = Task
-        if config["class"]:
-            self.labels = open(config["class"]).read().strip().split("\n")
-    def loadmodel():
-        return 1
+        self.labels = open(config["modelClass"]).read().strip().split("\n")
+        self.weightAddress=config["weightAddress"]
+        self.weightAddress=config["configAddress"]
+        self.toDownload=config["toDownload"]
 
-    def process_frame(frame):
+    def loadmodel(self):
+        if self.toDownload:
+            self.modelNet,self.ln=downloadModel()
+        else:
+            self.modelNet=cv2.dnn.readNet(configPath, weightsPath)
+            ln = self.modelNet.getLayerNames()
+            self.ln= [ln[i[0] - 1] for i in self.modelNet.getUnconnectedOutLayers()]
+
+    def downloadModel(self):
+        #should that shit put in paraser class ? so we only focus on load
+
+        return 1
+    
+    def process_frame(self,blob):
         COLORS=  np.random.randint(0, 255, size=(len(self.labels), 3),dtype="uint8")
-        blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416),
-            swapRB=True, crop=False)
+        
         self.modelNet.setInput(blob)
         start = time.time()
-        layerOutputs = self.modelNet.forward(ln)
+        layerOutputs = self.modelNet.forward(self.ln)
         end = time.time()
         boxes = []
         confidences = []
