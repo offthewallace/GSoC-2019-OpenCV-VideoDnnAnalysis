@@ -50,16 +50,25 @@ class Video:
 class paraser
 
 
-class Model(ABC):
+class Model(object):
     def __init__(self, Task, configs):
         self.modelNet = None
-        self.ln=None
+        #self.ln=None
         self.modelType = Task
         self.labels = open(config["modelClass"]).read().strip().split("\n")
         self.weightAddress=config["weightAddress"]
         self.weightAddress=config["configAddress"]
         self.toDownload=config["toDownload"]
+        self.loader=self.loader()
+        self.processor=self.processor()
 
+
+
+    class loader():
+
+    class processor():
+
+        
     def loadmodel(self):
         if self.toDownload:
             self.modelNet,self.ln=downloadModel()
@@ -72,8 +81,11 @@ class Model(ABC):
         #should that shit put in paraser class ? so we only focus on load
 
         return 1
-    
-    def process_frame(self,blob):
+
+    def modelImport()
+
+
+    def process_frame_yolo(self,blob):
         COLORS=  np.random.randint(0, 255, size=(len(self.labels), 3),dtype="uint8")
         
         self.modelNet.setInput(blob)
