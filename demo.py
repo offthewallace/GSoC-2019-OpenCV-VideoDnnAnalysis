@@ -11,23 +11,34 @@ import numpy as np
 
 from multiprocessing.pool import ThreadPool
 from collections import deque
+import pandas as pd 
+
+class paraser(self,task,config):
+
+    def __init__(self,task,config):
 
 
+    def downloadFile():
+        pass
+
+    def preprocess():
+        pass
 
 
 class Video:
-    def __init__(self, videoAddress,configs):
-        if configs['mutiThread']:
-            self.applyMutiThread=True
-        else: self.applyMutiThread=False
-        self.writeVideo=False
-        self.threadn = 1
-        self.pool = dests
+    def __init__(self, Videoconfigs):
+        self.inputSize=Videoconfigs["inputSize"]
+        self.writeVideo=Videoconfigs["writeVideo"]
+        #self.threadn = 1
+        self.threadn = cv.getNumberOfCPUs()
+        self.pool = ThreadPool(processes = threadn)
+        #self.pool = dests
         self.pending = deque()
-        self.videoReader= cv2.VideoCapture(videoAddress)
-    def videoProcess(model):
-        writer = None
-        (W, H) = (None, None)
+        self.videoReader= cv2.VideoCapture(config['videoAddress'])
+
+    def videoProcess(Model):
+        #writer = None
+        #(W, H) = (None, None)
         try:
             prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
                 else cv2.CAP_PROP_FRAME_COUNT
@@ -40,70 +51,73 @@ class Video:
             print("[INFO] could not determine # of frames in video")
             print("[INFO] no approx. completion time can be provided")
             total = -1
+        output={}
+        framesID=0
+        last_frame_time = clock()
          while True:
+            
             while len(pending) > 0 and pending[0].ready():
-                (grabbed, frame) = vs.read()
-    def videoToFrame(configs):
+                frameDict=pending.popleft().get()
+                output["framesID"]=frameDict
+            if len(self.pending) < self.threadn: 
+                (grabbed, frame) = self.videoReader.read()
+                framesID+=1
+                if not grabbed:
+                    break
+                blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (self.inputSize, self.inputSize),
+                    swapRB=True, crop=False)
+                t = clock()
+                #frame_interval.update(t - last_frame_time)
+                last_frame_time = t
+                
+                task = pool.apply_async(Model.process_frame, (blob.copy()))
+                pending.append(task)
+                #Model.process
+
+        
+        return output
+
+    def videoToFrame(Videoconfigs):
         return 1
 
 # parse the user configs 
-class paraser
+
 
 
 class Model():
-    def __init__(self, Task, configs):
+    def __init__(self, Task, modelConfigs):
         self.modelNet = None
+        self.lastLayer=None
         #self.ln=None
         self.modelType = Task
-        self.framework=config['framework']
-        self.labels = open(config["modelLabels"]).read().strip().split("\n")
-        self.weightAddress=config["weightAddress"]
-        self.configAddress=config["configAddress"]
-        self.blobSize=config["inputSize"]
+        self.framework=modelConfigs['framework']
+        self.labels = open(modelConfigs["modelLabels"]).read().strip().split("\n")
+        self.weightAddress=modelConfigs["weightAddress"]
+        self.configAddress=modelConfigs["configAddress"]
+        self.blobSize=modelConfigs["inputSize"]
         #self.toDownload=config["toDownload"]
-
-
-    '''
-    def load():
-        pass
-    def process():
-        pass
-
-
-    class loader():
-
-    class processor():
-
-    def downloadModel(self):
-        #should that shit put in paraser class ? so we only focus on load
-
-        return 1
-
-    def modelImport()
-
-    '''
-    #control by lastLayer type 
+ 
     def loadmodel(self):
         
         self.modelNet=cv2.dnn.readNet(self.configAddress, self.weightAddress,self.framework)
         layerNames = self.modelNet.getLayerNames()
         lastLayerId = self.modelNet.getLayerId(layerNames[-1])
-        lastLayer = self.modelNet.getLayer(lastLayerId)
+        self.lastLayer = self.modelNet.getLayer(lastLayerId)
         #ln = self.modelNet.getLayerNames()
-        return lastLayer
+        
 
 
-    def process_helper(blob):
-        self.net.setInput(blob)
-        self.net.forward(outNames)
-       
-    # check the decorator Its wrong in Here!!!
-    @process_helper(blob)
-    def process(out,lastLayer):
+   
+    def process(blob):
+        self.modelNet.setInput(blob)
+        self.modelNet.forward(outNames)
+
+        #sepecific for the object detection model 
+        output={}
         classIds = []
         confidences = []
         boxes = []
-        if self.net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
+        if self.modelNet.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
             # Network produces output blob with a shape 1x1xNx7 where N is a number of
             # detections and an every detection is a vector of values
             # [batchId, classId, confidence, left, top, right, bottom]
@@ -120,7 +134,7 @@ class Model():
                         classIds.append(int(detection[1]) - 1)  # Skip background label
                         confidences.append(float(confidence))
                         boxes.append([left, top, width, height])
-        elif lastLayer.type == 'DetectionOutput':
+        elif self.lastLayer.type == 'DetectionOutput':
             # Network produces output blob with a shape 1x1xNx7 where N is a number of
             # detections and an every detection is a vector of values
             # [batchId, classId, confidence, left, top, right, bottom]
@@ -163,110 +177,48 @@ class Model():
             print('Unknown output layer type: ' + lastLayer.type)
             exit()
         
+        indices = cv2.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+        for i in indices:
+            i = i[0]
+            box = boxes[i]
+            left = box[0]
+            top = box[1]
+            width = box[2]
+            height = box[3]
+            tempDict={}
+            tempDict['className']=classIds[i]
+            tempDict['confidences']=confidences[i]
+            tempDict['left']=left
+            tempDict['top']=top
+            tempDict['right']=left + width
+            tempDict['bottom']=top + height
+
+            output['box'+str(i)]=tempDict
+        return output
 
 
-    def process_frame_object_detection(self,blob):
-        COLORS=  np.random.randint(0, 255, size=(len(self.labels), 3),dtype="uint8")
-        
-        self.modelNet.setInput(blob)
-        start = time.time()
-        layerOutputs = self.modelNet.forward(self.ln)
-        end = time.time()
-        boxes = []
-        confidences = []
-        classIDs = []
-        for output in layerOutputs:
-            # loop over each of the detections
-            for detection in output:
-            # extract the class ID and confidence (i.e., probability)
-            # of the current object detection
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                confidence = scores[classID]
-
-                # filter out weak predictions by ensuring the detected
-                # probability is greater than the minimum probability
-                if confidence > args["confidence"]:
-                    # scale the bounding box coordinates back relative to
-                    # the size of the image, keeping in mind that YOLO
-                    # actually returns the center (x, y)-coordinates of
-                    # the bounding box followed by the boxes' width and
-                    # height
-                    box = detection[0:4] * np.array([W, H, W, H])
-                    (centerX, centerY, width, height) = box.astype("int")
-
-                    # use the center (x, y)-coordinates to derive the top
-                    # and and left corner of the bounding box
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
-
-                    # update our list of bounding box coordinates,
-                    # confidences, and class IDs
-                    boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(confidence))
-                    classIDs.append(classID)
-
-
-            # apply non-maxima suppression to suppress weak, overlapping
-            # bounding boxes
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence,self.threshold)
-
-        # ensure at least one detection exists
-        output = {}
-        if len(idxs) > 0:
-            # loop over the indexes we are keeping
-            for i in idxs.flatten():
-                # extract the bounding box coordinates
-                x, y = boxes[i][0], boxes[i][1]
-                w, h = boxes[i][2], boxes[i][3]
-
-                # draw a bounding box rectangle and label on the frame
-                if self.write==True:
-                    color = [int(c) for c in COLORS[classIDs[i]]]
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-                    text = "{}: {:.4f}".format(self.labels[classIDs[i]],
-                        confidences[i])
-                    cv2.putText(frame, text, (x, y - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                output.append([])
-        # check if the video writer is None
-        if writer is None:
-            # initialize our video writer
-            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            writer = cv2.VideoWriter(self."output", fourcc, 30,
-                (frame.shape[1], frame.shape[0]), True)
-            writer.write(frame)
-            # some information on processing single frame
-            #if total > 0:
-            #    elap = (end - start)
-            #    print("[INFO] single frame took {:.4f} seconds".format(elap))
-            #    print("[INFO] estimated total time to finish: {:.4f}".format(
-            #        elap * total))
-
-        # write the output frame to disk
-        return 
-
-    # some intensive computation...
-    
-        
-        
+def postprocess(outputDict):
+    pass   
 
 def videoAnalysis(videos,task,config):
     
+    parser=parser(task,config)
+
     video=Video(videos,configs)
+
     model=Models(Task,config)
+    model.loadmodel()
+
+    outputDict = video.videoProcess(model)
+
+
+
+
     
     
-    threadn = cv.getNumberOfCPUs()
-    pool = ThreadPool(processes = threadn)
     
 
-    if task=="yolo":
-        weightsPath = os.path.sep.join([config["model"], task+".weights"])
-        configPath = os.path.sep.join([config["model"], task+".cfg"])
-        net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
-        ln = net.getLayerNames()
-        ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+   
 
         # initialize the video stream, pointer to output video file, and
         # frame dimensions
