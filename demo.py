@@ -50,32 +50,29 @@ class Video:
 class paraser
 
 
-class Model(object):
+class Model():
     def __init__(self, Task, configs):
         self.modelNet = None
         #self.ln=None
         self.modelType = Task
-        self.labels = open(config["modelClass"]).read().strip().split("\n")
+        self.framework=config['framework']
+        self.labels = open(config["modelLabels"]).read().strip().split("\n")
         self.weightAddress=config["weightAddress"]
-        self.weightAddress=config["configAddress"]
-        self.toDownload=config["toDownload"]
-        self.loader=self.loader()
-        self.processor=self.processor()
+        self.configAddress=config["configAddress"]
+        self.blobSize=config["inputSize"]
+        #self.toDownload=config["toDownload"]
 
+
+    '''
+    def load():
+        pass
+    def process():
+        pass
 
 
     class loader():
 
     class processor():
-
-        
-    def loadmodel(self):
-        if self.toDownload:
-            self.modelNet,self.ln=downloadModel()
-        else:
-            self.modelNet=cv2.dnn.readNet(configPath, weightsPath)
-            ln = self.modelNet.getLayerNames()
-            self.ln= [ln[i[0] - 1] for i in self.modelNet.getUnconnectedOutLayers()]
 
     def downloadModel(self):
         #should that shit put in paraser class ? so we only focus on load
@@ -84,8 +81,91 @@ class Model(object):
 
     def modelImport()
 
+    '''
+    #control by lastLayer type 
+    def loadmodel(self):
+        
+        self.modelNet=cv2.dnn.readNet(self.configAddress, self.weightAddress,self.framework)
+        layerNames = self.modelNet.getLayerNames()
+        lastLayerId = self.modelNet.getLayerId(layerNames[-1])
+        lastLayer = self.modelNet.getLayer(lastLayerId)
+        #ln = self.modelNet.getLayerNames()
+        return lastLayer
 
-    def process_frame_yolo(self,blob):
+
+    def process_helper(blob):
+        self.net.setInput(blob)
+        self.net.forward(outNames)
+       
+    # check the decorator Its wrong in Here!!!
+    @process_helper(blob)
+    def process(out,lastLayer):
+        classIds = []
+        confidences = []
+        boxes = []
+        if self.net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
+            # Network produces output blob with a shape 1x1xNx7 where N is a number of
+            # detections and an every detection is a vector of values
+            # [batchId, classId, confidence, left, top, right, bottom]
+            for out in outs:
+                for detection in out[0, 0]:
+                    confidence = detection[2]
+                    if confidence > confThreshold:
+                        left = int(detection[3])
+                        top = int(detection[4])
+                        right = int(detection[5])
+                        bottom = int(detection[6])
+                        width = right - left + 1
+                        height = bottom - top + 1
+                        classIds.append(int(detection[1]) - 1)  # Skip background label
+                        confidences.append(float(confidence))
+                        boxes.append([left, top, width, height])
+        elif lastLayer.type == 'DetectionOutput':
+            # Network produces output blob with a shape 1x1xNx7 where N is a number of
+            # detections and an every detection is a vector of values
+            # [batchId, classId, confidence, left, top, right, bottom]
+            for out in outs:
+                for detection in out[0, 0]:
+                    confidence = detection[2]
+                    if confidence > confThreshold:
+                        left = int(detection[3] * frameWidth)
+                        top = int(detection[4] * frameHeight)
+                        right = int(detection[5] * frameWidth)
+                        bottom = int(detection[6] * frameHeight)
+                        width = right - left + 1
+                        height = bottom - top + 1
+                        classIds.append(int(detection[1]) - 1)  # Skip background label
+                        confidences.append(float(confidence))
+                        boxes.append([left, top, width, height])
+        elif lastLayer.type == 'Region':
+            # Network produces output blob with a shape NxC where N is a number of
+            # detected objects and C is a number of classes + 4 where the first 4
+            # numbers are [center_x, center_y, width, height]
+            classIds = []
+            confidences = []
+            boxes = []
+            for out in outs:
+                for detection in out:
+                    scores = detection[5:]
+                    classId = np.argmax(scores)
+                    confidence = scores[classId]
+                    if confidence > confThreshold:
+                        center_x = int(detection[0] * frameWidth)
+                        center_y = int(detection[1] * frameHeight)
+                        width = int(detection[2] * frameWidth)
+                        height = int(detection[3] * frameHeight)
+                        left = int(center_x - width / 2)
+                        top = int(center_y - height / 2)
+                        classIds.append(classId)
+                        confidences.append(float(confidence))
+                        boxes.append([left, top, width, height])
+        else:
+            print('Unknown output layer type: ' + lastLayer.type)
+            exit()
+        
+
+
+    def process_frame_object_detection(self,blob):
         COLORS=  np.random.randint(0, 255, size=(len(self.labels), 3),dtype="uint8")
         
         self.modelNet.setInput(blob)
