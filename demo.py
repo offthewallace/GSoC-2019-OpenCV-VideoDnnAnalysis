@@ -6,23 +6,63 @@ import cv2
 import os
 from __future__ import print_function
 
-from abc import ABCMeta, abstractmethod
+#from abc import ABCMeta, abstractmethod
 import numpy as np
 
 from multiprocessing.pool import ThreadPool
 from collections import deque
 import pandas as pd 
 
-class paraser(self,task,config):
+tasks=['object detection','classcification']
+MODELADDRESS='list_topologies.yml'
+
+class paraser:
 
     def __init__(self,task,config):
+        self.videoAddress=config["video"]
+        self.task=task
+        self.confidence=config['confidence']
+        self.threshold=config['threshold']
+        self.classlabel=config['class']
+        self.modelinfo=None
+        self.modelWeight=None
+        self.backend=config['backend']
+        self.write=config['write']
+        self.multiThread=config['multiThread']
+        self.chooseModel=None
+        self.inputSize=None
+    
+        def preprocess(self,config):
+            if self.task not in tasks:
+                print('Unknown task: ' + self.task)
+                exit()
+            if not config["modelChoose"]:
+                #default model 
+                if self.task is "object detection":
+                    self.chooseModel="mobileNet-SSD"
+                if self.task is "classcification":
+                    self.chooseModel="mobileNet"
+            if not config["model"]:
+                self.modelWeight,self.modelConfigs=downloadModel(self,MODELADDRESS)
+            else:
+                self.modelWeight,self.modelinfo=config["modelWeight"], config['modelinfo']
+            if not config["inputSize"]:
+                self.inputSize=findInputsize(self.modelinfo)
+
+            modelConfigs={'framework':self.backend,
+                            "modelTask":self.task,
+                            "modelLabels":self.classlabel
+                            "weightAddress":self.modelWeight
+                            "configAddress":self.modelinfo
+                            "inputSize":self.inputSize}
+
+        def downloadModel(self,YAML):
+            pass
+
+        def findInputSize(self.modelinfo):
+            pass
 
 
-    def downloadFile():
-        pass
-
-    def preprocess():
-        pass
 
 
 class Video:
@@ -76,25 +116,25 @@ class Video:
 
         
         return output
-
+    '''
     def videoToFrame(Videoconfigs):
         return 1
-
+    '''
 # parse the user configs 
 
 
 
 class Model():
-    def __init__(self, Task, modelConfigs):
+    def __init__(self, modelConfigs):
         self.modelNet = None
         self.lastLayer=None
         #self.ln=None
-        self.modelType = Task
+        self.modelTask = Task
         self.framework=modelConfigs['framework']
         self.labels = open(modelConfigs["modelLabels"]).read().strip().split("\n")
         self.weightAddress=modelConfigs["weightAddress"]
         self.configAddress=modelConfigs["configAddress"]
-        self.blobSize=modelConfigs["inputSize"]
+        #self.blobSize=modelConfigs["inputSize"]
         #self.toDownload=config["toDownload"]
  
     def loadmodel(self):
@@ -106,9 +146,23 @@ class Model():
         #ln = self.modelNet.getLayerNames()
         
 
+    ### to check the method has to be 
+   def process(self,blob):
+        if self.modelTask="object detection":
+            if self.framework="darknet":
+                return self.process_yolo(blob)
+            else:
+                return self.process_od(blob)
+        else:
+            return self.process_classcification(blob)
 
-   
-    def process(blob):
+    def process_yolo(self,blob)
+        pass
+
+    def process_classcification(self,blob):
+        pass
+
+    def process_od(self,blob):
         self.modelNet.setInput(blob)
         self.modelNet.forward(outNames)
 
@@ -200,7 +254,7 @@ class Model():
 def postprocess(outputDict):
     pass   
 
-def videoAnalysis(videos,task,config):
+def videoAnalyze(videos,task,config):
     
     parser=parser(task,config)
 
@@ -210,67 +264,37 @@ def videoAnalysis(videos,task,config):
     model.loadmodel()
 
     outputDict = video.videoProcess(model)
-
-
-
-
-    
-    
-    
-
-   
-
-        # initialize the video stream, pointer to output video file, and
-        # frame dimensions
-        #vs = cv2.VideoCapture(config["input"])
-       
-        #need to change to muti processing mode 
-
-
-	        # if the frame was not grabbed, then we have reached the end
-	        # of the stream
-            if not grabbed:
-                break
-
-	        # if the frame dimensions are empty, grab them
-	        if W is None or H is None:
-		    (H, W) = frame.shape[:2]
-
-	        # construct a blob from the input frame and then perform a forward
-	        # pass of the YOLO object detector, giving us our bounding boxes
-	        # and associated probabilities
-	        
-
-            # initialize our lists of detected bounding boxes, confidences,
-            # and class IDs, respectively
-            
-        # release the file pointers
-        print("[INFO] cleaning up...")
-        writer.release()
-        vs.release()
-
-
-
-    else: return 1
-
+    return outputDict
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("-v", "--video", required=True,
 	    help="path to input video")
-    ap.add_argument("-o", "--output", required=True,
+    ap.add_argument("-o", "--output", default="./",
 	    help="path to output video")
     ap.add_argument("-t", "--task", required=True,
 	    help="base path to model directory")
-    ap.add_argument("-m", "--model", required=True,
+    ap.add_argument("-b", "--backend", default='caffe',
+        help="modelbackend ")
+    ap.add_argument("-choose", "--modelChoose", 
+        help="which model to use like ssd or FRCNN ")
+    ap.add_argument("-m", "--model", 
 	    help="base path to model directory")
-    ap.add_argument("-class", "--class", 
+    ap.add_argument("-info", "--modelinfo", 
+        help="base path to modelinfo file address for tensorflow and caffe")
+    ap.add_argument("-class", "--class",default="coco.name", 
 	    help="path to class file")
+    ap.add_argument("-multiThread", "--multiThread",type=bool,default="True", 
+        help="use multiThread or not ")
+    ap.add_argument("-write", "--write",type=bool,default="True", 
+        help="write the result on video or not ")
+
     ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
     ap.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applyong non-maxima suppression")
     args = vars(ap.parse_args())
-    Result_File, WrittenVideo= cv2.video_DNN.videoAnalysis(videoes, Tasks, configs). videoAnalysis(args["video"],args["task"],args)
+
+    Result_File=videoAnalyze(args["video"],args["task"],args)
 
 
