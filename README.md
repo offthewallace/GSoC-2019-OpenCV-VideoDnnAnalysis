@@ -1,6 +1,9 @@
 # GSoC-2019-OpenCV-VideoDnnAnalysis
 Its for demo of GSoC-2019-OpenCV-VideoDnnAnalysis proposal 
 
+Update 4/14: support YOLO now. I will add more features and better class design and documentation like in 2 hours. 
+
+
 Update 4/14: adding download file and parser for the class design, need finish download and findinputsize today and adding documentation. 
 
 

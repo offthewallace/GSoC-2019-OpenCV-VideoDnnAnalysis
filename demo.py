@@ -42,6 +42,7 @@ class paraser:
                     self.chooseModel="mobileNet-SSD"
                 if self.task is "classcification":
                     self.chooseModel="mobileNet"
+            else: self.chooseModel=config['modelChoose']
             if not config["model"]:
                 self.modelWeight,self.modelConfigs=downloadModel(self,MODELADDRESS)
             else:
@@ -55,6 +56,10 @@ class paraser:
                             "weightAddress":self.modelWeight
                             "configAddress":self.modelinfo
                             "inputSize":self.inputSize}
+
+            Videoconfigs={"inputSize": self.inputSize,
+                            "writeVideo": self.,
+                            'videoAddress': }
 
         def downloadModel(self,YAML):
             pass
@@ -155,17 +160,72 @@ class Model():
                 return self.process_od(blob)
         else:
             return self.process_classcification(blob)
+            
+    def process_yolo(self,blob,frameWidth,frameHeight):
+        #net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+        output={}
+        ln = net.getLayerNames()
+        self.lastLayer = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+        self.modelNet.setInput(blob)
+        layerOutputs = net.forward(ln)
+        boxes = []
+        confidences = []
+        classIDs = []
+        for output in layerOutputs:
+        # loop over each of the detections
+            for detection in output:
+                # extract the class ID and confidence (i.e., probability)
+                # of the current object detection
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                confidence = scores[classID]
 
-    def process_yolo(self,blob)
-        pass
+                # filter out weak predictions by ensuring the detected
+                # probability is greater than the minimum probability
+                if confidence > self.confidence:
+                    # scale the bounding box coordinates back relative to
+                    # the size of the image, keeping in mind that YOLO
+                    # actually returns the center (x, y)-coordinates of
+                    # the bounding box followed by the boxes' width and
+                    # height
+                    box = detection[0:4] * np.array([frameWidth,frameHeight,frameWidth,frameHeight])
+                    (centerX, centerY, width, height) = box.astype("int")
 
+                    # use the center (x, y)-coordinates to derive the top
+                    # and and left corner of the bounding box
+                    x = int(centerX - (width / 2))
+                    y = int(centerY - (height / 2))
+
+                    # update our list of bounding box coordinates,
+                    # confidences, and class IDs
+                    boxes.append([x, y, int(width), int(height)])
+                    confidences.append(float(confidence))
+                    classIDs.append(classID)
+        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence,
+        self.threshold)
+        if len(idxs) > 0:
+        # loop over the indexes we are keeping
+            for i in idxs.flatten():
+                # extract the bounding box coordinates
+                x, y,w,h = boxes[i][0], boxes[i][1],boxes[i][2], boxes[i][3]
+                tempDict={}
+                tempDict['className']=classIds[i]
+                tempDict['confidences']=confidences[i]
+                tempDict['left']=x
+                tempDict['top']=y
+                tempDict['right']=x + w
+                tempDict['bottom']=y + h
+                output['box'+str(i)]=tempDict
+        return output
+
+    
     def process_classcification(self,blob):
         pass
 
-    def process_od(self,blob):
+    def process_od(self,blob,frameWidth,frameHeight):
         self.modelNet.setInput(blob)
-        self.modelNet.forward(outNames)
-
+        outs=self.modelNet.forward(outNames)
+        
         #sepecific for the object detection model 
         output={}
         classIds = []
@@ -178,7 +238,7 @@ class Model():
             for out in outs:
                 for detection in out[0, 0]:
                     confidence = detection[2]
-                    if confidence > confThreshold:
+                    if confidence > self.confThreshold:
                         left = int(detection[3])
                         top = int(detection[4])
                         right = int(detection[5])
@@ -195,7 +255,7 @@ class Model():
             for out in outs:
                 for detection in out[0, 0]:
                     confidence = detection[2]
-                    if confidence > confThreshold:
+                    if confidence > self.confThreshold:
                         left = int(detection[3] * frameWidth)
                         top = int(detection[4] * frameHeight)
                         right = int(detection[5] * frameWidth)
@@ -217,7 +277,7 @@ class Model():
                     scores = detection[5:]
                     classId = np.argmax(scores)
                     confidence = scores[classId]
-                    if confidence > confThreshold:
+                    if confidence > self.confThreshold:
                         center_x = int(detection[0] * frameWidth)
                         center_y = int(detection[1] * frameHeight)
                         width = int(detection[2] * frameWidth)
@@ -231,7 +291,7 @@ class Model():
             print('Unknown output layer type: ' + lastLayer.type)
             exit()
         
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+        indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confThreshold, self.nmsThreshold)
         for i in indices:
             i = i[0]
             box = boxes[i]
