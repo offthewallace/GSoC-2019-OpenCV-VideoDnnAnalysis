@@ -68,8 +68,6 @@ class paraser:
             pass
 
 
-
-
 class Video:
     def __init__(self, Videoconfigs):
         self.inputSize=Videoconfigs["inputSize"]
@@ -148,82 +146,23 @@ class Model():
         layerNames = self.modelNet.getLayerNames()
         lastLayerId = self.modelNet.getLayerId(layerNames[-1])
         self.lastLayer = self.modelNet.getLayer(lastLayerId)
+
         #ln = self.modelNet.getLayerNames()
         
 
     ### to check the method has to be 
    def process(self,blob):
         if self.modelTask="object detection":
-            if self.framework="darknet":
-                return self.process_yolo(blob)
-            else:
-                return self.process_od(blob)
+            return self.process_od(blob)
         else:
             return self.process_classcification(blob)
-            
-    def process_yolo(self,blob,frameWidth,frameHeight):
-        #net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
-        output={}
-        ln = net.getLayerNames()
-        self.lastLayer = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
-        self.modelNet.setInput(blob)
-        layerOutputs = net.forward(ln)
-        boxes = []
-        confidences = []
-        classIDs = []
-        for output in layerOutputs:
-        # loop over each of the detections
-            for detection in output:
-                # extract the class ID and confidence (i.e., probability)
-                # of the current object detection
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                confidence = scores[classID]
-
-                # filter out weak predictions by ensuring the detected
-                # probability is greater than the minimum probability
-                if confidence > self.confidence:
-                    # scale the bounding box coordinates back relative to
-                    # the size of the image, keeping in mind that YOLO
-                    # actually returns the center (x, y)-coordinates of
-                    # the bounding box followed by the boxes' width and
-                    # height
-                    box = detection[0:4] * np.array([frameWidth,frameHeight,frameWidth,frameHeight])
-                    (centerX, centerY, width, height) = box.astype("int")
-
-                    # use the center (x, y)-coordinates to derive the top
-                    # and and left corner of the bounding box
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
-
-                    # update our list of bounding box coordinates,
-                    # confidences, and class IDs
-                    boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(confidence))
-                    classIDs.append(classID)
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence,
-        self.threshold)
-        if len(idxs) > 0:
-        # loop over the indexes we are keeping
-            for i in idxs.flatten():
-                # extract the bounding box coordinates
-                x, y,w,h = boxes[i][0], boxes[i][1],boxes[i][2], boxes[i][3]
-                tempDict={}
-                tempDict['className']=classIds[i]
-                tempDict['confidences']=confidences[i]
-                tempDict['left']=x
-                tempDict['top']=y
-                tempDict['right']=x + w
-                tempDict['bottom']=y + h
-                output['box'+str(i)]=tempDict
-        return output
-
-    
+   
     def process_classcification(self,blob):
         pass
 
     def process_od(self,blob,frameWidth,frameHeight):
         self.modelNet.setInput(blob)
+        outNames=self.modelNet.getUnconnectedOutLayersNames()
         outs=self.modelNet.forward(outNames)
         
         #sepecific for the object detection model 
@@ -266,6 +205,7 @@ class Model():
                         confidences.append(float(confidence))
                         boxes.append([left, top, width, height])
         elif lastLayer.type == 'Region':
+            #it's for yolo output
             # Network produces output blob with a shape NxC where N is a number of
             # detected objects and C is a number of classes + 4 where the first 4
             # numbers are [center_x, center_y, width, height]

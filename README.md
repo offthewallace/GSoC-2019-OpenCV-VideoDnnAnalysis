@@ -1,6 +1,15 @@
 # GSoC-2019-OpenCV-VideoDnnAnalysis
 Its for demo of GSoC-2019-OpenCV-VideoDnnAnalysis proposal 
 
+## Overview
+
+This project is a highlevel API based on OpenCV library that can help users to more easily
+process different deep learning models on videos.
+
+the goal would be for users to ultimately only have to call one-line helper methods that return the processing results in
+JSON/DataFrame format for future data analysis.
+
+# development log:
 Update 4/14: support YOLO now. I will add more features and better class design and documentation like in 2 hours. 
 
 
